@@ -1,23 +1,32 @@
 use std::sync::mpsc;
 
 use leptos::*;
-use winit::{dpi::LogicalSize, platform::web::WindowAttributesExtWebSys, window::Window};
+use winit::{
+    platform::web::WindowAttributesExtWebSys,
+    window::{Window, WindowAttributes},
+};
 
 use crate::{engine, systems};
 
 /// Engine canvas.
 ///
 /// This component handles the creation, destruction, and restarting of the engine.
+///
+/// The `window_attributes` and `system_pipeline_args` props are only for initialization,
+/// changing them after the engine is started will have no effect.
 #[component]
 pub fn EngineCanvas(
-    #[prop(default = 100.0)] width: f64,
-    #[prop(default = 100.0)] height: f64,
-    #[prop(default = systems::FpsLimit::new(60))] fps_limit: systems::FpsLimit,
-    #[prop(default = "wgpu + Leptos".to_string(), into)] title: String,
+    #[prop(default = Window::default_attributes())] window_attributes: WindowAttributes,
+    #[prop(default = systems::Args {
+        fps_limit: systems::FpsLimit::limited(60).unwrap(),
+    })]
+    system_pipeline_args: systems::Args,
     #[prop(optional)] tx: Option<RwSignal<Option<mpsc::Sender<systems::EngineExternalSignal>>>>,
 ) -> impl IntoView {
     let node = create_node_ref::<html::Canvas>();
 
+    let window_attributes = create_rw_signal(window_attributes);
+    let system_pipeline_args = create_rw_signal(system_pipeline_args);
     let tx = tx.unwrap_or(create_rw_signal(None));
 
     // Cleanup the engine when the component is destroyed.
@@ -39,12 +48,8 @@ pub fn EngineCanvas(
 
         let canvas = <web_sys::HtmlCanvasElement as Clone>::clone(&node);
 
-        let window_attributes = Window::default_attributes()
-            .with_canvas(Some(canvas))
-            .with_inner_size(LogicalSize::new(width, height))
-            .with_title(title.clone());
-
-        let system_pipeline_args = systems::Args { fps_limit };
+        let window_attributes = window_attributes.get().with_canvas(Some(canvas));
+        let system_pipeline_args = system_pipeline_args.get();
 
         // Either create a new engine or restart the existing one.
         match tx.get() {

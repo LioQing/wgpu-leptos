@@ -131,7 +131,7 @@ impl Display {
         }
     }
 
-    pub fn render(&mut self, render: impl FnOnce(&mut wgpu::RenderPass)) {
+    pub fn render(&mut self, render: impl FnOnce(&mut Display, &mut wgpu::RenderPass)) {
         let texture = self.surface.get_current_texture().unwrap();
         let texture_view = texture
             .texture
@@ -166,7 +166,7 @@ impl Display {
                 timestamp_writes: None,
             });
 
-            render(&mut render_pass);
+            render(self, &mut render_pass);
         }
 
         // Submit render pass

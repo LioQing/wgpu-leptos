@@ -1,5 +1,5 @@
 /// The configurations of the system pipeline.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Args {
     pub fps_limit: FpsLimit,
 }

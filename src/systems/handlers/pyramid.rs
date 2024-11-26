@@ -14,6 +14,9 @@ pub struct Pyramid {
     render_pipeline: wgpu::RenderPipeline,
 
     transform_bind_group: wgpu::BindGroup,
+
+    is_transform_dirty: bool,
+    is_model_dirty: bool,
 }
 
 impl Pyramid {
@@ -142,27 +145,98 @@ impl Pyramid {
             render_pipeline,
 
             transform_bind_group,
+
+            is_transform_dirty: false,
+            is_model_dirty: false,
         }
     }
 
-    pub fn update(&mut self, dt: f32, queue: &wgpu::Queue) {
-        self.transform.transform.rotate(Quat::from_axis_angle(
-            Vec3::Y,
-            self.transform.auto_rotation_speed * dt,
-        ));
-
-        queue.write_buffer(
-            &self.transform_buffer,
-            0,
-            self.transform.buffer().as_bytes(),
-        );
+    /// Returns the transform of the pyramid.
+    pub fn transform(&self) -> &PyramidTransform {
+        &self.transform
     }
 
-    pub fn render(&self, render_pass: &mut wgpu::RenderPass, camera_bind_group: &wgpu::BindGroup) {
+    /// Returns the model of the pyramid.
+    ///
+    /// This sets the dirty flag.
+    pub fn transform_mut(&mut self) -> &mut PyramidTransform {
+        self.is_transform_dirty = true;
+        &mut self.transform
+    }
+
+    /// Returns the model of the pyramid.
+    ///
+    /// This does not set the dirty flag.
+    pub fn transform_mut_clean(&mut self) -> &mut PyramidTransform {
+        &mut self.transform
+    }
+
+    /// Sets the transform of the pyramid.
+    pub fn set_transform(&mut self, transform: PyramidTransform) {
+        self.transform = transform;
+        self.is_transform_dirty = true;
+    }
+
+    /// Returns the model of the pyramid.
+    pub fn model(&self) -> &PyramidModel {
+        &self.model
+    }
+
+    /// Returns the model of the pyramid.
+    ///
+    /// This sets the dirty flag.
+    pub fn model_mut(&mut self) -> &mut PyramidModel {
+        self.is_model_dirty = true;
+        &mut self.model
+    }
+
+    /// Returns the model of the pyramid.
+    ///
+    /// This does not set the dirty flag.
+    pub fn model_mut_clean(&mut self) -> &mut PyramidModel {
+        &mut self.model
+    }
+
+    /// Sets the model of the pyramid.
+    pub fn set_model(&mut self, model: PyramidModel) {
+        self.model = model;
+        self.is_model_dirty = true;
+    }
+
+    pub fn update(&mut self, dt: f32) {
+        let rotation = self.transform().auto_rotation_speed * dt;
+        self.transform_mut()
+            .transform
+            .rotate(Quat::from_axis_angle(Vec3::Y, rotation));
+    }
+
+    pub fn render(
+        &mut self,
+        queue: &wgpu::Queue,
+        render_pass: &mut wgpu::RenderPass,
+        camera_bind_group: &wgpu::BindGroup,
+    ) {
+        // Update buffers if dirty
+        if self.is_transform_dirty {
+            queue.write_buffer(
+                &self.transform_buffer,
+                0,
+                self.transform.buffer().as_bytes(),
+            );
+            self.is_transform_dirty = false;
+        }
+
+        if self.is_model_dirty {
+            queue.write_buffer(&self.model_buffer, 0, self.model.buffer().as_bytes());
+            self.is_model_dirty = false;
+        }
+
+        // Calculate lengths
         let model_buffer_len =
             (std::mem::size_of::<PyramidVertex>() * (self.model.side_count + 1)) as u64;
         let index_buffer_len = (std::mem::size_of::<u16>() * self.model.side_count * 3) as u64;
 
+        // Render
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_bind_group(0, camera_bind_group, &[]);
         render_pass.set_bind_group(1, &self.transform_bind_group, &[]);

@@ -3361,6 +3361,7 @@ dependencies = [
  "leptos-use",
  "log",
  "ordered-float",
+ "paste",
  "thiserror 2.0.3",
  "wasm-bindgen",
  "wasm-bindgen-futures",

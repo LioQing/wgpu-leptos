@@ -6,8 +6,8 @@ mod display;
 mod pyramid;
 mod time;
 
-pub use camera::{Camera, CameraBuilder};
-pub use cursor_lock::{CursorLock, CursorLockBuilder};
-pub use display::{Display, DisplayBuilder};
-pub use pyramid::{Pyramid, PyramidBuilder};
-pub use time::{Time, TimeBuilder};
+pub use camera::*;
+pub use cursor_lock::*;
+pub use display::*;
+pub use pyramid::*;
+pub use time::*;

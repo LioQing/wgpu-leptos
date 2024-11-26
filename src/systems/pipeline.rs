@@ -66,7 +66,7 @@ impl engine::SystemPipeline for Pipeline {
         self.time.update();
         self.display.update(&items.input);
         self.cursor_lock.update(&mut items.input);
-        self.pyramid.update(self.time.delta(), self.display.queue());
+        self.pyramid.update(self.time.delta());
 
         if self.cursor_lock.is_cursor_locked() {
             self.camera.update(
@@ -77,8 +77,10 @@ impl engine::SystemPipeline for Pipeline {
             );
         }
 
-        self.display
-            .render(|pass| self.pyramid.render(pass, self.camera.bind_group()));
+        self.display.render(|display, pass| {
+            self.pyramid
+                .render(display.queue(), pass, self.camera.bind_group())
+        });
 
         self.time.end_frame(items.window.clone());
     }
@@ -89,6 +91,12 @@ impl engine::SystemPipeline for Pipeline {
                 let _ = items
                     .window
                     .request_inner_size(LogicalSize::new(resize.width, resize.height));
+            }
+            ExternalSignal::PyramidTransformUpdate(update) => {
+                self.pyramid.set_transform(update.transform);
+            }
+            ExternalSignal::PyramidModelUpdate(update) => {
+                self.pyramid.set_model(update.model);
             }
         }
     }
