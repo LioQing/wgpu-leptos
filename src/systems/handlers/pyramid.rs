@@ -24,14 +24,9 @@ impl Pyramid {
         device: &wgpu::Device,
         surface_config: &wgpu::SurfaceConfiguration,
         camera_bind_group_layout: &wgpu::BindGroupLayout,
-        transform: Transform,
-        auto_rotation_speed: f32,
-        height: f32,
-        base_radius: f32,
-        side_count: usize,
+        transform: PyramidTransform,
+        model: PyramidModel,
     ) -> Self {
-        let transform = PyramidTransform::new(transform, auto_rotation_speed);
-        let model = PyramidModel::new(height, base_radius, side_count);
         let indices = model.indices().collect::<Vec<_>>();
 
         log::debug!("Creating pyramid transform buffer");
@@ -256,16 +251,18 @@ pub struct PyramidTransform {
 }
 
 impl PyramidTransform {
-    pub fn new(transform: Transform, auto_rotation_speed: f32) -> Self {
-        Self {
-            transform,
-            auto_rotation_speed,
-        }
-    }
-
     fn buffer(&self) -> PyramidTransformBuffer {
         PyramidTransformBuffer {
             transform: self.transform.matrix(),
+        }
+    }
+}
+
+impl Default for PyramidTransform {
+    fn default() -> Self {
+        Self {
+            transform: Transform::IDENTITY,
+            auto_rotation_speed: 1.0,
         }
     }
 }
@@ -290,14 +287,6 @@ pub struct PyramidModel {
 }
 
 impl PyramidModel {
-    pub fn new(height: f32, base_radius: f32, side_count: usize) -> Self {
-        Self {
-            height,
-            base_radius,
-            side_count,
-        }
-    }
-
     pub fn indices(&self) -> impl Iterator<Item = u16> + '_ {
         (0..self.side_count).flat_map(|i| {
             [
@@ -310,6 +299,16 @@ impl PyramidModel {
 
     fn buffer(&self) -> PyramidModelBuffer {
         PyramidModelBuffer::new(self.height, self.base_radius, self.side_count)
+    }
+}
+
+impl Default for PyramidModel {
+    fn default() -> Self {
+        Self {
+            height: 1.0,
+            base_radius: 1.0,
+            side_count: 4,
+        }
     }
 }
 
@@ -383,11 +382,8 @@ pub struct PyramidBuilder<T, U, V> {
     device: T,
     surface_config: U,
     camera_bind_group_layout: V,
-    transform: Transform,
-    auto_rotation_speed: f32,
-    height: f32,
-    base_radius: f32,
-    side_count: usize,
+    transform: PyramidTransform,
+    model: PyramidModel,
 }
 
 pub mod builder {
@@ -407,11 +403,8 @@ impl PyramidBuilder<builder::NoDevice, builder::NoSurfaceConfig, builder::NoCame
             device: builder::NoDevice,
             surface_config: builder::NoSurfaceConfig,
             camera_bind_group_layout: builder::NoCameraBindGroupLayout,
-            transform: Transform::IDENTITY,
-            auto_rotation_speed: 1.0,
-            height: 1.0,
-            base_radius: 1.0,
-            side_count: 4,
+            transform: PyramidTransform::default(),
+            model: PyramidModel::default(),
         }
     }
 }
@@ -423,10 +416,7 @@ impl<T, U, V> PyramidBuilder<T, U, V> {
             surface_config: self.surface_config,
             camera_bind_group_layout: self.camera_bind_group_layout,
             transform: self.transform,
-            auto_rotation_speed: self.auto_rotation_speed,
-            height: self.height,
-            base_radius: self.base_radius,
-            side_count: self.side_count,
+            model: self.model,
         }
     }
 
@@ -439,10 +429,7 @@ impl<T, U, V> PyramidBuilder<T, U, V> {
             surface_config: builder::WithSurfaceConfig(surface_config),
             camera_bind_group_layout: self.camera_bind_group_layout,
             transform: self.transform,
-            auto_rotation_speed: self.auto_rotation_speed,
-            height: self.height,
-            base_radius: self.base_radius,
-            side_count: self.side_count,
+            model: self.model,
         }
     }
 
@@ -455,50 +442,57 @@ impl<T, U, V> PyramidBuilder<T, U, V> {
             surface_config: self.surface_config,
             camera_bind_group_layout: builder::WithCameraBindGroupLayout(camera_bind_group_layout),
             transform: self.transform,
-            auto_rotation_speed: self.auto_rotation_speed,
-            height: self.height,
-            base_radius: self.base_radius,
-            side_count: self.side_count,
+            model: self.model,
         }
     }
 
-    pub fn with_transform(mut self, transform: Transform) -> Self {
+    pub fn with_pyramid_transform(mut self, transform: PyramidTransform) -> Self {
         self.transform = transform;
         self
     }
 
+    pub fn with_transform(mut self, transform: Transform) -> Self {
+        self.transform.transform = transform;
+        self
+    }
+
     pub fn with_position(mut self, position: Vec3) -> Self {
-        self.transform.position = position;
+        self.transform.transform.position = position;
         self
     }
 
     pub fn with_rotation(mut self, rotation: Quat) -> Self {
-        self.transform.rotation = rotation;
+        self.transform.transform.rotation = rotation;
         self
     }
 
     pub fn with_scale(mut self, scale: Vec3) -> Self {
-        self.transform.scale = scale;
+        self.transform.transform.scale = scale;
         self
     }
 
     pub fn with_auto_rotation_speed(mut self, auto_rotation_speed: f32) -> Self {
-        self.auto_rotation_speed = auto_rotation_speed;
+        self.transform.auto_rotation_speed = auto_rotation_speed;
+        self
+    }
+
+    pub fn with_model(mut self, model: PyramidModel) -> Self {
+        self.model = model;
         self
     }
 
     pub fn with_height(mut self, height: f32) -> Self {
-        self.height = height;
+        self.model.height = height;
         self
     }
 
     pub fn with_base_radius(mut self, base_radius: f32) -> Self {
-        self.base_radius = base_radius;
+        self.model.base_radius = base_radius;
         self
     }
 
     pub fn with_side_count(mut self, side_count: usize) -> Self {
-        self.side_count = side_count;
+        self.model.side_count = side_count;
         self
     }
 }
@@ -516,10 +510,7 @@ impl<'a>
             self.surface_config.0,
             self.camera_bind_group_layout.0,
             self.transform,
-            self.auto_rotation_speed,
-            self.height,
-            self.base_radius,
-            self.side_count,
+            self.model,
         )
     }
 }

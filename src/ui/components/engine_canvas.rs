@@ -17,10 +17,7 @@ use crate::{engine, systems};
 #[component]
 pub fn EngineCanvas(
     #[prop(default = Window::default_attributes())] window_attributes: WindowAttributes,
-    #[prop(default = systems::Args {
-        fps_limit: systems::FpsLimit::limited(60).unwrap(),
-    })]
-    system_pipeline_args: systems::Args,
+    #[prop(default = systems::Args::default())] system_pipeline_args: systems::Args,
     #[prop(optional)] tx: Option<RwSignal<Option<mpsc::Sender<systems::EngineExternalSignal>>>>,
 ) -> impl IntoView {
     let node = create_node_ref::<html::Canvas>();

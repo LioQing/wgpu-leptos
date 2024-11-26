@@ -16,29 +16,7 @@ pub struct Camera {
 impl Camera {
     pub const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 1e-6;
 
-    pub fn new(
-        device: &wgpu::Device,
-        aspect_ratio: f32,
-        position: Vec3,
-        pitch: f32,
-        yaw: f32,
-        vertical_fov: f32,
-        z_near: f32,
-        z_far: f32,
-        speed: f32,
-        mouse_sensitivity: f32,
-    ) -> Self {
-        let model = CameraModel::new(
-            position,
-            pitch,
-            yaw,
-            vertical_fov,
-            z_near,
-            z_far,
-            speed,
-            mouse_sensitivity,
-        );
-
+    pub fn new(device: &wgpu::Device, aspect_ratio: f32, model: CameraModel) -> Self {
         log::debug!("Creating camera model buffer");
         let model_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Model Buffer"),
@@ -173,28 +151,6 @@ impl CameraModel {
     const FORWARD: Vec3 = Vec3::NEG_Z;
     const UP: Vec3 = Vec3::Y;
 
-    pub fn new(
-        position: Vec3,
-        pitch: f32,
-        yaw: f32,
-        vertical_fov: f32,
-        z_near: f32,
-        z_far: f32,
-        speed: f32,
-        mouse_sensitivity: f32,
-    ) -> Self {
-        Self {
-            position,
-            pitch,
-            yaw,
-            vertical_fov,
-            z_near,
-            z_far,
-            speed,
-            mouse_sensitivity,
-        }
-    }
-
     pub fn forward(&self) -> Vec3 {
         Quat::from_euler(EulerRot::ZYX, 0.0, self.yaw, self.pitch) * Self::FORWARD
     }
@@ -213,6 +169,21 @@ impl CameraModel {
 
     fn buffer(&self, aspect_ratio: f32) -> CameraModelBuffer {
         CameraModelBuffer::new(self.projection_matrix(aspect_ratio) * self.view_matrix())
+    }
+}
+
+impl Default for CameraModel {
+    fn default() -> Self {
+        Self {
+            position: Vec3::ZERO,
+            pitch: 0.0,
+            yaw: 0.0,
+            vertical_fov: 60f32.to_radians(),
+            z_near: 1e-3,
+            z_far: 1e3,
+            speed: 1.0,
+            mouse_sensitivity: 0.1,
+        }
     }
 }
 
@@ -237,14 +208,7 @@ impl CameraModelBuffer {
 pub struct CameraBuilder<T, U> {
     device: T,
     aspect_ratio: U,
-    position: Vec3,
-    pitch: f32,
-    yaw: f32,
-    vertical_fov: f32,
-    z_near: f32,
-    z_far: f32,
-    speed: f32,
-    mouse_sensitivity: f32,
+    model: CameraModel,
 }
 
 pub mod builder {
@@ -260,14 +224,7 @@ impl CameraBuilder<builder::NoDevice, builder::NoAspectRatio> {
         Self {
             device: builder::NoDevice,
             aspect_ratio: builder::NoAspectRatio,
-            position: Vec3::ZERO,
-            pitch: 0.0,
-            yaw: 0.0,
-            vertical_fov: 60f32.to_radians(),
-            z_near: 1e-3,
-            z_far: 1e3,
-            speed: 1.0,
-            mouse_sensitivity: 0.1,
+            model: CameraModel::default(),
         }
     }
 }
@@ -277,14 +234,7 @@ impl<T, U> CameraBuilder<T, U> {
         CameraBuilder {
             device: builder::WithDevice(device),
             aspect_ratio: self.aspect_ratio,
-            position: self.position,
-            pitch: self.pitch,
-            yaw: self.yaw,
-            vertical_fov: self.vertical_fov,
-            z_near: self.z_near,
-            z_far: self.z_far,
-            speed: self.speed,
-            mouse_sensitivity: self.mouse_sensitivity,
+            model: self.model,
         }
     }
 
@@ -295,71 +245,58 @@ impl<T, U> CameraBuilder<T, U> {
         CameraBuilder {
             device: self.device,
             aspect_ratio: builder::WithAspectRatio(aspect_ratio),
-            position: self.position,
-            pitch: self.pitch,
-            yaw: self.yaw,
-            vertical_fov: self.vertical_fov,
-            z_near: self.z_near,
-            z_far: self.z_far,
-            speed: self.speed,
-            mouse_sensitivity: self.mouse_sensitivity,
+            model: self.model,
         }
     }
 
+    pub fn with_model(mut self, model: CameraModel) -> Self {
+        self.model = model;
+        self
+    }
+
     pub fn with_position(mut self, position: Vec3) -> Self {
-        self.position = position;
+        self.model.position = position;
         self
     }
 
     pub fn with_pitch(mut self, pitch: f32) -> Self {
-        self.pitch = pitch;
+        self.model.pitch = pitch;
         self
     }
 
     pub fn with_yaw(mut self, yaw: f32) -> Self {
-        self.yaw = yaw;
+        self.model.yaw = yaw;
         self
     }
 
     pub fn with_vertical_fov(mut self, vertical_fov: f32) -> Self {
-        self.vertical_fov = vertical_fov;
+        self.model.vertical_fov = vertical_fov;
         self
     }
 
     pub fn with_z_near(mut self, z_near: f32) -> Self {
-        self.z_near = z_near;
+        self.model.z_near = z_near;
         self
     }
 
     pub fn with_z_far(mut self, z_far: f32) -> Self {
-        self.z_far = z_far;
+        self.model.z_far = z_far;
         self
     }
 
     pub fn with_speed(mut self, speed: f32) -> Self {
-        self.speed = speed;
+        self.model.speed = speed;
         self
     }
 
     pub fn with_mouse_sensitivity(mut self, mouse_sensitivity: f32) -> Self {
-        self.mouse_sensitivity = mouse_sensitivity;
+        self.model.mouse_sensitivity = mouse_sensitivity;
         self
     }
 }
 
 impl<'a> CameraBuilder<builder::WithDevice<'a>, builder::WithAspectRatio> {
     pub fn build(self) -> Camera {
-        Camera::new(
-            self.device.0,
-            self.aspect_ratio.0,
-            self.position,
-            self.pitch,
-            self.yaw,
-            self.vertical_fov,
-            self.z_near,
-            self.z_far,
-            self.speed,
-            self.mouse_sensitivity,
-        )
+        Camera::new(self.device.0, self.aspect_ratio.0, self.model)
     }
 }

@@ -5,7 +5,7 @@ use winit::{dpi::LogicalSize, window::Window};
 
 use crate::{
     engine,
-    systems::{handlers, Args, ExternalSignal, RgbColor},
+    systems::{handlers, Args, ExternalSignal},
 };
 
 /// Pipeline.
@@ -29,7 +29,7 @@ impl engine::SystemPipeline for Pipeline {
             .build();
         let display = handlers::DisplayBuilder::new()
             .with_window(window.clone())
-            .with_clear_color(RgbColor::DARK_SLATE_GRAY)
+            .with_clear_color(configs.clear_color)
             .build()
             .await;
         let cursor_lock = handlers::CursorLockBuilder::new()
@@ -45,6 +45,8 @@ impl engine::SystemPipeline for Pipeline {
             .with_device(display.device())
             .with_surface_config(display.config())
             .with_camera_bind_group_layout(camera.bind_group_layout())
+            .with_pyramid_transform(configs.pyramid_transform)
+            .with_model(configs.pyramid_model)
             .build();
 
         log::info!("System pipeline initialized");

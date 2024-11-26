@@ -5,6 +5,7 @@ const INSTRUCTIONS: &[&str] = &[
     "Click on the canvas to focus and lock the cursor.",
     "Move the mouse to look around when the cursor is locked.",
     "Use the W, A, S, D, Space, Shift keys to move around when the cursor is locked.",
+    "Change the configurations to see the changes in real-time.",
     "Press the Escape key or the Tab key to unlock the cursor.",
 ];
 
@@ -31,6 +32,8 @@ pub fn SidePanel(
                     </Show>
                 </button>
             </div>
+            <h3>"Configurations"</h3>
+
             <h3>"Instructions"</h3>
             <ul style="margin-top: 0;">
                 {INSTRUCTIONS
