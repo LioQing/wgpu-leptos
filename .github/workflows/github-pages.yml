@@ -36,7 +36,7 @@ jobs:
       - name: Build with Trunk
         run: |
           rustup target add wasm32-unknown-unknown
-          trunk build --release
+          trunk build --release --public-url ./
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

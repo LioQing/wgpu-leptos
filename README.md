@@ -1,5 +1,7 @@
 # wgpu + Leptos
 
+[![GitHub Pages](https://github.com/LioQing/wgpu-leptos/actions/workflows/github-pages.yml/badge.svg)](https://github.com/LioQing/wgpu-leptos/actions/workflows/github-pages.yml)
+
 This project provides a Rust template for running [wgpu](https://wgpu.rs/) in a [Leptos](https://leptos.dev/) application.
 
 This project is made possible by [WASM](https://webassembly.org/) and [WebGPU](https://www.w3.org/TR/webgpu/).
