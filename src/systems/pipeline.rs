@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use glam::*;
-use winit::window::Window;
+use winit::{dpi::LogicalSize, window::Window};
 
 use crate::{
     engine,
@@ -88,7 +88,7 @@ impl engine::SystemPipeline for Pipeline {
             ExternalSignal::Resize(resize) => {
                 let _ = items
                     .window
-                    .request_inner_size(winit::dpi::PhysicalSize::new(resize.width, resize.height));
+                    .request_inner_size(LogicalSize::new(resize.width, resize.height));
             }
         }
     }

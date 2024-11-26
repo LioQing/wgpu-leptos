@@ -10,8 +10,8 @@ use crate::{engine, systems};
 /// This component handles the creation, destruction, and restarting of the engine.
 #[component]
 pub fn EngineCanvas(
-    #[prop(default = 800.0)] width: f64,
-    #[prop(default = 600.0)] height: f64,
+    #[prop(default = 100.0)] width: f64,
+    #[prop(default = 100.0)] height: f64,
     #[prop(default = systems::FpsLimit::new(60))] fps_limit: systems::FpsLimit,
     #[prop(default = "wgpu + Leptos".to_string(), into)] title: String,
     #[prop(optional)] tx: Option<RwSignal<Option<mpsc::Sender<systems::EngineExternalSignal>>>>,

@@ -185,7 +185,7 @@ impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U, V> ApplicationHandler f
                             }
                             ExternalSignal::Stop => log::warn!("Engine already stopped"),
                             ExternalSignal::Custom { signal, queued } => match queued {
-                                true => self.queued_signals.push_front(signal),
+                                true => self.queued_signals.push_back(signal),
                                 false => log::warn!("Custom signal received but engine is stopped, you may try to use queued signals"),
                             }
                         }

@@ -1,6 +1,7 @@
 use std::sync::mpsc;
 
 use leptos::*;
+use leptos_use::use_element_size;
 
 use crate::{systems, ui::components::EngineCanvas};
 
@@ -15,6 +16,7 @@ const INSTRUCTIONS: &[&str] = &[
 #[component]
 pub fn App() -> impl IntoView {
     let container_node = create_node_ref::<html::Div>();
+    let container_size = use_element_size(container_node);
 
     let engine_tx = create_rw_signal::<Option<mpsc::Sender<systems::EngineExternalSignal>>>(None);
     let running = create_rw_signal(false);
@@ -22,6 +24,8 @@ pub fn App() -> impl IntoView {
     // Keep the engine same size as the container.
     create_effect(move |_| {
         let _ = running.get();
+        let _ = container_size.width.get();
+        let _ = container_size.height.get();
 
         // We can only resize the engine if the container node and engine tx are available.
         let (container_node, tx) = match (container_node.get(), engine_tx.get()) {
@@ -30,17 +34,12 @@ pub fn App() -> impl IntoView {
         };
 
         let container = container_node.get_bounding_client_rect();
+        let width = container.width();
+        let height = container.height();
 
-        log::debug!(
-            "Resizing engine to {}x{}",
-            container.width(),
-            container.height()
-        );
-        tx.send(systems::ResizeSignal::queued(
-            container.width(),
-            container.height(),
-        ))
-        .unwrap();
+        log::debug!("Resizing engine to {width} x {height}");
+        tx.send(systems::ResizeSignal::queued(width, height))
+            .unwrap();
     });
 
     view! {
@@ -52,7 +51,7 @@ pub fn App() -> impl IntoView {
         ">
             <div style="flex: 1; display: flex; height: 100%; overflow: hidden;">
                 <div style="
-                    flex: 1;
+                    flex: 1 0 50px;
                     display: flex;
                     flex-direction: column;
                     overflow: auto;
@@ -78,10 +77,26 @@ pub fn App() -> impl IntoView {
                         }
                     </ul>
                 </div>
-                <div ref=container_node style="flex: 3; height=100%;">
+                <div ref=container_node style="flex: 3 0 100px; height=100%;">
                     <Show
                         when=move || running.get()
-                        fallback=|| view! { <div style="display: block; width: 100%; height: 100%" /> }
+                        fallback=|| view! {
+                            <div style="
+                                display: flex;
+                                flex-direction: column;
+                                justify-content: center;
+                                align-items: center;
+                                width: 100%;
+                                height: 100%;
+                            ">
+                                <h4 style="
+                                    maxWidth: min(100%, 400px);
+                                    textAlign: center;
+                                ">
+                                    "Click 'Start Engine' to start the engine."
+                                </h4>
+                            </div>
+                        }
                     >
                         <EngineCanvas tx=engine_tx />
                     </Show>
