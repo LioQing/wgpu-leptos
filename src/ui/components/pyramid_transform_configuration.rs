@@ -103,16 +103,16 @@ impl Vec3Controller {
         property: fn(&systems::handlers::PyramidTransform) -> &Vec3,
         property_mut: fn(&mut systems::handlers::PyramidTransform) -> &mut Vec3,
     ) -> Self {
-        let controller_value = create_memo(move |_| {
+        let controller_value = move || {
             controller
                 .pyramid_transform()
                 .with(|transform| *property(transform))
-        });
+        };
 
         let err = create_rw_signal(None);
-        let x = create_rw_signal(controller_value.get().x.to_string());
-        let y = create_rw_signal(controller_value.get().y.to_string());
-        let z = create_rw_signal(controller_value.get().z.to_string());
+        let x = create_rw_signal(controller_value().x.to_string());
+        let y = create_rw_signal(controller_value().y.to_string());
+        let z = create_rw_signal(controller_value().z.to_string());
 
         Self {
             controller,
@@ -297,14 +297,14 @@ impl ScalarController {
         property: fn(&systems::handlers::PyramidTransform) -> &f32,
         property_mut: fn(&mut systems::handlers::PyramidTransform) -> &mut f32,
     ) -> Self {
-        let controller_value = create_memo(move |_| {
+        let controller_value = move || {
             controller
                 .pyramid_transform()
                 .with(|transform| *property(transform))
-        });
+        };
 
         let err = create_rw_signal(None);
-        let value = create_rw_signal(controller_value.get().to_string());
+        let value = create_rw_signal(controller_value().to_string());
 
         Self {
             controller,

@@ -11,7 +11,7 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-use crate::engine::{ExternalSignal, Items, SystemPipeline};
+use crate::engine::{external_signal, ExternalSignal, Items, SystemPipeline};
 
 /// The main engine struct that create the window and runs the system pipeline.
 pub struct Engine<T: SystemPipeline<Args = U, ExternalSignal = V>, U: 'static, V> {
@@ -184,10 +184,16 @@ impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U, V> ApplicationHandler f
                                 return;
                             }
                             ExternalSignal::Stop => log::warn!("Engine already stopped"),
-                            ExternalSignal::Custom { signal, queued } => match queued {
-                                true => self.queued_signals.push_back(signal),
-                                false => log::warn!("Custom signal received but engine is stopped, you may try to use queued signals"),
-                            }
+                            ExternalSignal::Custom { signal, queue } => match queue {
+                                external_signal::QueueBehavior::Replace(pred) => {
+                                    self.queued_signals.retain(|x| !pred(x, &signal));
+                                    self.queued_signals.push_back(signal)
+                                }
+                                external_signal::QueueBehavior::Queued => {
+                                    self.queued_signals.push_back(signal)
+                                }
+                                external_signal::QueueBehavior::Ignored => {}
+                            },
                         }
                     }
 

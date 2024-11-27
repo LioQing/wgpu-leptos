@@ -17,12 +17,13 @@ pub fn SidePanel(
     #[prop(default = "".to_string(), into)] style: String,
 ) -> impl IntoView {
     view! {
-        <div style="\
-            display: flex;\
-            flex-direction: column;\
-            overflow: auto;\
-            padding: 16px 24px;\
-        ".to_string() + &style>
+        <div style=format!("\
+            display: flex; \
+            flex-direction: column; \
+            overflow: auto; \
+            padding: 16px 24px; \
+            {style}
+        ")>
             <h2>"wgpu + Leptos"</h2>
             <div style="display: flex;">
                 <button on:click=move |_| controller.running().set(!controller.running().get())>

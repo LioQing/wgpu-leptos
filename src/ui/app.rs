@@ -8,14 +8,14 @@ pub fn App() -> impl IntoView {
 
     view! {
         <div style="\
-            display: flex;\
-            flex-direction: column;\
-            height: 100vh;\
-            overflow: hidden;\
+            display: flex; \
+            flex-direction: column; \
+            height: 100vh; \
+            overflow: hidden; \
         ">
             <div style="flex: 1; display: flex; height: 100%; overflow: hidden;">
                 <SidePanel controller=controller style="flex: 0 0 300px;" />
-                <Engine controller=controller style="flex: 3 0 100px; height=100%;" />
+                <Engine controller=controller style="flex: 1 1 auto; height: 100%;" />
             </div>
             <Footer style="flex: 0 0 auto;" />
         </div>

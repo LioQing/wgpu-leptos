@@ -3,12 +3,13 @@ use leptos::*;
 #[component]
 pub fn Footer(#[prop(default = "".to_string(), into)] style: String) -> impl IntoView {
     view! {
-        <footer style="\
-            display: flex;\
-            justify-content: center;\
-            align-items: center;\
-            background-color: lightgray;\
-        ".to_string() + &style>
+        <footer style=format!("\
+            display: flex; \
+            justify-content: center; \
+            align-items: center; \
+            background-color: lightgray; \
+            {style}
+        ")>
             <p>
                 "Made with ❤️ by "
                 <a href="https://lioqing.com" target="_blank">

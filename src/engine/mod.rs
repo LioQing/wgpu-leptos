@@ -1,6 +1,6 @@
 mod core;
 mod error;
-mod external_signal;
+pub mod external_signal;
 mod items;
 mod runner;
 mod system_pipeline;

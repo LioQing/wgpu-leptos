@@ -33,27 +33,25 @@ pub fn Engine(
         let width = container.width();
         let height = container.height();
 
-        log::debug!("Resizing engine to {width:.2} x {height:.2}");
-        tx.send(systems::ResizeSignal::queued(width, height))
-            .unwrap();
+        tx.send(systems::ResizeSignal::new(width, height)).unwrap();
     });
 
     view! {
-        <div ref=container_node style=style>
+        <div ref=container_node style=format!("overflow: hidden; {style}")>
             <Show
                 when=move || controller.running().get()
                 fallback=|| view! {
                     <div style="\
-                        display: flex;\
-                        flex-direction: column;\
-                        justify-content: center;\
-                        align-items: center;\
-                        width: 100%;\
-                        height: 100%;\
+                        display: flex; \
+                        flex-direction: column; \
+                        justify-content: center; \
+                        align-items: center; \
+                        width: 100%; \
+                        height: 100%; \
                     ">
                         <h4 style="\
-                            maxWidth: min(100%, 400px);\
-                            textAlign: center;\
+                            maxWidth: min(100%, 400px); \
+                            textAlign: center; \
                         ">
                             "Click 'Start Engine' to see the output."
                         </h4>
@@ -98,7 +96,7 @@ impl EngineController {
     pub fn signal_pyramid_transform_update(&self) {
         self.tx().with(|tx| match tx {
             Some(tx) => {
-                tx.send(systems::PyramidTransformUpdateSignal::queued(
+                tx.send(systems::PyramidTransformUpdateSignal::new(
                     self.pyramid_transform().get(),
                 ))
                 .unwrap();

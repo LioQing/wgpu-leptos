@@ -88,7 +88,11 @@ impl engine::SystemPipeline for Pipeline {
     fn external_signal(&mut self, items: &mut engine::Items, signal: Self::ExternalSignal) {
         match signal {
             ExternalSignal::Resize(resize) => {
-                log::debug!("Resize external signal");
+                log::debug!(
+                    "Resize external signal: {} x {}",
+                    resize.width,
+                    resize.height
+                );
                 let _ = items
                     .window
                     .request_inner_size(LogicalSize::new(resize.width, resize.height));

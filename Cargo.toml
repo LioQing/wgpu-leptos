@@ -31,6 +31,3 @@ wgpu = { version = "23.0.0", features = ["webgl"] }
 
 [lints.rust]
 dead_code = "allow"
-
-[lints.clippy]
-too_many_arguments = "allow"
