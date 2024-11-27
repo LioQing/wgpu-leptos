@@ -16,15 +16,16 @@ use crate::{engine, systems};
 /// changing them after the engine is started will have no effect.
 #[component]
 pub fn EngineCanvas(
-    #[prop(default = Window::default_attributes())] window_attributes: WindowAttributes,
-    #[prop(default = systems::Args::default())] system_pipeline_args: systems::Args,
-    #[prop(optional)] tx: Option<RwSignal<Option<mpsc::Sender<systems::EngineExternalSignal>>>>,
+    #[prop(default = (move || Window::default_attributes()).into(), into)]
+    window_attributes: Signal<WindowAttributes>,
+    #[prop(default = (move || systems::Args::default()).into(), into)] system_pipeline_args: Signal<
+        systems::Args,
+    >,
+    #[prop(optional, into)] tx: Option<(ReadSignal<EngineTx>, WriteSignal<EngineTx>)>,
 ) -> impl IntoView {
     let node = create_node_ref::<html::Canvas>();
 
-    let window_attributes = create_rw_signal(window_attributes);
-    let system_pipeline_args = create_rw_signal(system_pipeline_args);
-    let tx = tx.unwrap_or(create_rw_signal(None));
+    let (tx, set_tx) = tx.unwrap_or(create_signal(None));
 
     // Cleanup the engine when the component is destroyed.
     on_cleanup(move || {
@@ -45,11 +46,11 @@ pub fn EngineCanvas(
 
         let canvas = <web_sys::HtmlCanvasElement as Clone>::clone(&node);
 
-        let window_attributes = window_attributes.get().with_canvas(Some(canvas));
-        let system_pipeline_args = system_pipeline_args.get();
+        let window_attributes = window_attributes.get_untracked().with_canvas(Some(canvas));
+        let system_pipeline_args = system_pipeline_args.get_untracked();
 
         // Either create a new engine or restart the existing one.
-        match tx.get() {
+        match tx.get_untracked() {
             Some(tx) => {
                 log::debug!("Restarting engine canvas");
 
@@ -63,7 +64,7 @@ pub fn EngineCanvas(
                 log::debug!("Starting engine canvas");
 
                 let (new_tx, rx) = mpsc::channel();
-                tx.set(Some(new_tx));
+                set_tx.set(Some(new_tx));
 
                 engine::Runner::new()
                     .with_window_attributes(window_attributes)
@@ -79,3 +80,6 @@ pub fn EngineCanvas(
         <canvas ref=node />
     }
 }
+
+/// Engine external signal sender.
+pub type EngineTx = Option<mpsc::Sender<systems::EngineExternalSignal>>;

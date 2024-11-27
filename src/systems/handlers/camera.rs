@@ -175,7 +175,7 @@ impl CameraModel {
 impl Default for CameraModel {
     fn default() -> Self {
         Self {
-            position: Vec3::ZERO,
+            position: vec3(0.0, 0.5, 5.0),
             pitch: 0.0,
             yaw: 0.0,
             vertical_fov: 60f32.to_radians(),

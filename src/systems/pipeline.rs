@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use glam::*;
 use winit::{dpi::LogicalSize, window::Window};
 
 use crate::{
@@ -39,7 +38,6 @@ impl engine::SystemPipeline for Pipeline {
         let camera = handlers::CameraBuilder::new()
             .with_device(display.device())
             .with_aspect_ratio(display.aspect_ratio())
-            .with_position(vec3(0.0, 0.5, 2.0))
             .build();
         let pyramid = handlers::PyramidBuilder::new()
             .with_device(display.device())
@@ -90,14 +88,17 @@ impl engine::SystemPipeline for Pipeline {
     fn external_signal(&mut self, items: &mut engine::Items, signal: Self::ExternalSignal) {
         match signal {
             ExternalSignal::Resize(resize) => {
+                log::debug!("Resize external signal");
                 let _ = items
                     .window
                     .request_inner_size(LogicalSize::new(resize.width, resize.height));
             }
             ExternalSignal::PyramidTransformUpdate(update) => {
+                log::debug!("Pyramid transform external signal");
                 self.pyramid.set_transform(update.transform);
             }
             ExternalSignal::PyramidModelUpdate(update) => {
+                log::debug!("Pyramid model external signal");
                 self.pyramid.set_model(update.model);
             }
         }

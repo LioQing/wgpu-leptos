@@ -19,7 +19,7 @@ macro_rules! signals {
             pub type EngineExternalSignal = engine::ExternalSignal<Args, ExternalSignal>;
 
             $(
-                /// [`[<$name Signal>]`] signal for [`ExternalSignal`].
+                /// Signal for [`ExternalSignal`].
                 pub struct [<$name Signal>] {
                     $(pub $field: $type,)*
                 }

@@ -1,5 +1,7 @@
 use leptos::*;
 
+use crate::ui::components::{engine::EngineController, PyramidTransformConfiguration};
+
 const INSTRUCTIONS: &[&str] = &[
     "Click the button to start or stop the engine.",
     "Click on the canvas to focus and lock the cursor.",
@@ -11,30 +13,32 @@ const INSTRUCTIONS: &[&str] = &[
 
 #[component]
 pub fn SidePanel(
-    #[prop(into)] running: RwSignal<bool>,
+    #[prop(into)] controller: EngineController,
     #[prop(default = "".to_string(), into)] style: String,
 ) -> impl IntoView {
     view! {
-        <div style="
-            display: flex;
-            flex-direction: column;
-            overflow: auto;
-            padding: 16px 24px;
+        <div style="\
+            display: flex;\
+            flex-direction: column;\
+            overflow: auto;\
+            padding: 16px 24px;\
         ".to_string() + &style>
             <h2>"wgpu + Leptos"</h2>
             <div style="display: flex;">
-                <button on:click=move |_| running.set(!running.get())>
+                <button on:click=move |_| controller.running().set(!controller.running().get())>
                     <Show
-                        when=move || running.get()
+                        when=move || controller.running().get()
                         fallback=|| "Start Engine"
                     >
                         "Stop Engine"
                     </Show>
                 </button>
             </div>
-            <h3>"Configurations"</h3>
-
-            <h3>"Instructions"</h3>
+            <div style="margin-bottom: 16px;" />
+            <h3 style="margin-top: 0;">"Configurations"</h3>
+            <PyramidTransformConfiguration controller=controller />
+            <div style="margin-bottom: 16px;" />
+            <h3 style="margin-top: 0;">"Instructions"</h3>
             <ul style="margin-top: 0;">
                 {INSTRUCTIONS
                     .iter()

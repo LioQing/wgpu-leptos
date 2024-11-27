@@ -18,6 +18,6 @@ Features:
 Improvements:
 
 - 📦 Be more modular and less ambiguous in the functionality and responsibility of each module.
-- 📚 Improve the example to provide more features in the template.
+- 🤝 Allow bidirectional communication, instead of only letting Leptos send message to the engine.
 - 👾 Fix minor bugs related to controls, e.g. when window resizes.
 - ⚙️ Add more configuration options.
