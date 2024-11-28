@@ -1,14 +1,14 @@
 #![allow(clippy::new_ret_no_self)]
 
 use crate::{
-    engine::{self, external_signal::QueueBehavior},
+    engine::{self, signal::QueueBehavior},
     systems::{handlers::PyramidModel, Args},
 };
 
 use super::handlers::PyramidTransform;
 
-/// Type alias for the [`engine::ExternalSignal`] of [`crate::systems::Pipeline`].
-pub type EngineExternalSignal = engine::ExternalSignal<Args, ExternalSignal>;
+/// Type alias for the [`engine::InSignal`] of [`crate::systems::Pipeline`].
+pub type EngineInSignal = engine::InSignal<Args, InSignal>;
 
 macro_rules! signals {
     (
@@ -20,22 +20,22 @@ macro_rules! signals {
         )*
     ) => {
         paste::paste! {
-            /// External signal of [`Pipeline`].
+            /// Incoming signal of [`Pipeline`].
             #[derive(strum::EnumIs)]
-            pub enum ExternalSignal {
+            pub enum InSignal {
                 $($name([< $name Signal >]),)*
             }
 
             $(
-                /// Signal for [`ExternalSignal`].
+                /// Signal for [`InSignal`].
                 pub struct [< $name Signal >] {
                     $(pub $field: $type,)*
                 }
 
                 impl [< $name Signal >] {
-                    pub fn new($($field: $type),*) -> EngineExternalSignal {
-                        EngineExternalSignal::Custom {
-                            signal: ExternalSignal::$name(Self { $($field),* }),
+                    pub fn new($($field: $type),*) -> EngineInSignal {
+                        EngineInSignal::Custom {
+                            signal: InSignal::$name(Self { $($field),* }),
                             $($($behavior_ident: $behavior_expr,)+)?
                         }
                     }

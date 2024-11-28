@@ -1,11 +1,11 @@
 use winit::window::WindowAttributes;
 
-/// External signal passed to the engine.
+/// Ingcoming signal passed to the engine.
 ///
 /// This is mostly only used in WASM builds,
 /// so that the engine can interoperate with the UI.
 #[derive(Debug, Clone)]
-pub enum ExternalSignal<T, U> {
+pub enum InSignal<T, U> {
     /// Start or restart the engine.
     Start {
         window_attributes: WindowAttributes,
@@ -17,7 +17,7 @@ pub enum ExternalSignal<T, U> {
     Custom { signal: U, queue: QueueBehavior<U> },
 }
 
-/// Queue behavior of the [`ExternalSignal`].
+/// Queue behavior of the [`InSignal`].
 ///
 /// The engine provides a queue for signals when it is stopped,
 /// this enum specifies the behavior of the signal when queued.

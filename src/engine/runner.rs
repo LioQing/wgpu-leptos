@@ -5,28 +5,28 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
-use crate::engine::{Engine, Error, ExternalSignal, SystemPipeline};
+use crate::engine::{Engine, Error, InSignal, SystemPipeline};
 
 /// Build and run engine.
 pub struct Runner<T, U> {
     window_attributes: WindowAttributes,
     system_pipeline: T,
-    external_signal_rx: U,
+    rx: U,
 }
 
 pub struct NoSystemPipeline;
 pub struct WithSystemPipeline<T: SystemPipeline>(pub T::Args);
 
-pub struct NoExternalSignalRx;
-pub struct WithExternalSignalRx<T, U>(pub mpsc::Receiver<ExternalSignal<T, U>>);
+pub struct NoRx;
+pub struct WithRx<T, U>(pub mpsc::Receiver<InSignal<T, U>>);
 
-impl Runner<NoSystemPipeline, NoExternalSignalRx> {
+impl Runner<NoSystemPipeline, NoRx> {
     /// Create a new runner.
     pub fn new() -> Self {
         Self {
             window_attributes: Window::default_attributes().with_title("wgpu + Leptos"),
             system_pipeline: NoSystemPipeline,
-            external_signal_rx: NoExternalSignalRx,
+            rx: NoRx,
         }
     }
 }
@@ -49,38 +49,35 @@ impl<T, U> Runner<T, U> {
         Runner {
             window_attributes: self.window_attributes,
             system_pipeline: WithSystemPipeline(args),
-            external_signal_rx: self.external_signal_rx,
+            rx: self.rx,
         }
     }
 
     /// Set receiver to listen for any events from outside the engine.
-    pub fn with_external_signal_rx<W, X>(
-        self,
-        rx: mpsc::Receiver<ExternalSignal<W, X>>,
-    ) -> Runner<T, WithExternalSignalRx<W, X>> {
+    pub fn with_rx<W, X>(self, rx: mpsc::Receiver<InSignal<W, X>>) -> Runner<T, WithRx<W, X>> {
         Runner {
             window_attributes: self.window_attributes,
             system_pipeline: self.system_pipeline,
-            external_signal_rx: WithExternalSignalRx(rx),
+            rx: WithRx(rx),
         }
     }
 }
 
-impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U: 'static, V>
-    Runner<WithSystemPipeline<T>, WithExternalSignalRx<U, V>>
+impl<T: SystemPipeline<Args = U, InSignal = V>, U: 'static, V>
+    Runner<WithSystemPipeline<T>, WithRx<U, V>>
 {
     /// Run the engine.
     pub fn run(self) -> Result<(), Error> {
         let event_loop = EventLoop::new()?;
         let mut engine = Engine::<T, U, V>::new(self.window_attributes, self.system_pipeline.0)
-            .with_external_signal_rx(self.external_signal_rx.0);
+            .with_rx(self.rx.0);
 
         log::info!("Starting engine");
         Ok(event_loop.run_app(&mut engine)?)
     }
 }
 
-impl<T: SystemPipeline<Args = U>, U: 'static> Runner<WithSystemPipeline<T>, NoExternalSignalRx> {
+impl<T: SystemPipeline<Args = U>, U: 'static> Runner<WithSystemPipeline<T>, NoRx> {
     /// Run the engine.
     pub fn run(self) -> Result<(), Error> {
         let event_loop = EventLoop::new()?;

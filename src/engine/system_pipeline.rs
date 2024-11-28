@@ -13,8 +13,8 @@ pub trait SystemPipeline: Sized + 'static {
     /// Arguments passed in externally to the engine for initialization.
     type Args;
 
-    /// Custom external signal for [`crate::engine::ExternalSignal::Custom`].
-    type ExternalSignal;
+    /// Custom incoming signal for [`crate::engine::InSignal::Custom`].
+    type InSignal;
 
     /// Called when the window is just created.
     async fn init(window: Arc<Window>, args: Self::Args) -> Self;
@@ -36,9 +36,9 @@ pub trait SystemPipeline: Sized + 'static {
     /// [`Items::input`] is processed.
     fn update(&mut self, items: &mut Items) {}
 
-    /// Called when there is a [`SystemPipeline::ExternalSignal`].
+    /// Called when there is a [`SystemPipeline::InSignal`].
     ///
     /// This is called after [`SystemPipeline::window_event`] and
     /// [`SystemPipeline::update`].
-    fn external_signal(&mut self, items: &mut Items, signal: Self::ExternalSignal) {}
+    fn in_signal(&mut self, items: &mut Items, signal: Self::InSignal) {}
 }

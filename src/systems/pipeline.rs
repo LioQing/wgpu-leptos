@@ -4,7 +4,7 @@ use winit::{dpi::LogicalSize, window::Window};
 
 use crate::{
     engine,
-    systems::{handlers, Args, ExternalSignal},
+    systems::{handlers, Args, InSignal},
 };
 
 /// Pipeline.
@@ -18,7 +18,7 @@ pub struct Pipeline {
 
 impl engine::SystemPipeline for Pipeline {
     type Args = Args;
-    type ExternalSignal = ExternalSignal;
+    type InSignal = InSignal;
 
     async fn init(window: Arc<Window>, configs: Self::Args) -> Self {
         log::debug!("Initializing system pipeline");
@@ -68,7 +68,7 @@ impl engine::SystemPipeline for Pipeline {
         self.cursor_lock.update(&mut items.input);
         self.pyramid.update(self.time.delta());
 
-        if self.cursor_lock.is_cursor_locked() {
+        if self.cursor_lock.is_cursor_locked() || items.input.window_resized().is_some() {
             self.camera.update(
                 self.time.delta(),
                 self.display.queue(),
@@ -85,11 +85,11 @@ impl engine::SystemPipeline for Pipeline {
         self.time.end_frame(items.window.clone());
     }
 
-    fn external_signal(&mut self, items: &mut engine::Items, signal: Self::ExternalSignal) {
+    fn in_signal(&mut self, items: &mut engine::Items, signal: Self::InSignal) {
         match signal {
-            ExternalSignal::Resize(resize) => {
+            InSignal::Resize(resize) => {
                 log::debug!(
-                    "Resize external signal: {} x {}",
+                    "Resize incoming signal: {} x {}",
                     resize.width,
                     resize.height
                 );
@@ -97,12 +97,12 @@ impl engine::SystemPipeline for Pipeline {
                     .window
                     .request_inner_size(LogicalSize::new(resize.width, resize.height));
             }
-            ExternalSignal::PyramidTransformUpdate(update) => {
-                log::debug!("Pyramid transform external signal");
+            InSignal::PyramidTransformUpdate(update) => {
+                log::debug!("Pyramid transform incoming signal");
                 self.pyramid.set_transform(update.transform);
             }
-            ExternalSignal::PyramidModelUpdate(update) => {
-                log::debug!("Pyramid model external signal");
+            InSignal::PyramidModelUpdate(update) => {
+                log::debug!("Pyramid model incoming signal");
                 self.pyramid.set_model(update.model);
             }
         }

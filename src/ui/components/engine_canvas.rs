@@ -31,7 +31,7 @@ pub fn EngineCanvas(
     on_cleanup(move || {
         tx.with(move |tx| {
             if let Some(tx) = tx {
-                tx.send(engine::ExternalSignal::Stop).unwrap();
+                tx.send(engine::InSignal::Stop).unwrap();
             }
         });
     });
@@ -54,7 +54,7 @@ pub fn EngineCanvas(
             Some(tx) => {
                 log::debug!("Restarting engine canvas");
 
-                tx.send(engine::ExternalSignal::Start {
+                tx.send(engine::InSignal::Start {
                     window_attributes,
                     system_pipeline_args,
                 })
@@ -68,7 +68,7 @@ pub fn EngineCanvas(
 
                 engine::Runner::new()
                     .with_window_attributes(window_attributes)
-                    .with_external_signal_rx(rx)
+                    .with_rx(rx)
                     .with_system_pipeline::<systems::Pipeline>(system_pipeline_args)
                     .run()
                     .unwrap();
@@ -81,5 +81,5 @@ pub fn EngineCanvas(
     }
 }
 
-/// Engine external signal sender.
-pub type EngineTx = Option<mpsc::Sender<systems::EngineExternalSignal>>;
+/// Engine incoming signal sender.
+pub type EngineTx = Option<mpsc::Sender<systems::EngineInSignal>>;

@@ -11,16 +11,16 @@ use winit::{
 };
 use winit_input_helper::WinitInputHelper;
 
-use crate::engine::{external_signal, ExternalSignal, Items, SystemPipeline};
+use crate::engine::{signal, InSignal, Items, SystemPipeline};
 
 /// The main engine struct that create the window and runs the system pipeline.
-pub struct Engine<T: SystemPipeline<Args = U, ExternalSignal = V>, U: 'static, V> {
-    external_rx: Option<mpsc::Receiver<ExternalSignal<U, V>>>,
+pub struct Engine<T: SystemPipeline<Args = U, InSignal = V>, U: 'static, V> {
+    rx: Option<mpsc::Receiver<InSignal<U, V>>>,
     queued_signals: VecDeque<V>,
     state: EngineState<T, U>,
 }
 
-impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U, V> Engine<T, U, V> {
+impl<T: SystemPipeline<Args = U, InSignal = V>, U, V> Engine<T, U, V> {
     pub fn new(window_attributes: WindowAttributes, system_pipeline_args: U) -> Self {
         let state = EngineState::PreInit {
             items: PreInitItems {
@@ -30,20 +30,20 @@ impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U, V> Engine<T, U, V> {
         };
 
         Self {
-            external_rx: None,
+            rx: None,
             queued_signals: VecDeque::new(),
             state,
         }
     }
 
-    /// Set the external signal receiver.
-    pub fn with_external_signal_rx(mut self, rx: mpsc::Receiver<ExternalSignal<U, V>>) -> Self {
-        self.external_rx = Some(rx);
+    /// Set the incoming signal receiver.
+    pub fn with_rx(mut self, rx: mpsc::Receiver<InSignal<U, V>>) -> Self {
+        self.rx = Some(rx);
         self
     }
 }
 
-impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U, V> ApplicationHandler for Engine<T, U, V> {
+impl<T: SystemPipeline<Args = U, InSignal = V>, U, V> ApplicationHandler for Engine<T, U, V> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Already initialized
         if !matches!(&self.state, EngineState::PreInit { .. }) {
@@ -142,34 +142,34 @@ impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U, V> ApplicationHandler f
 
                 // Handle queued events
                 while let Some(signal) = self.queued_signals.pop_front() {
-                    system_pipeline.external_signal(items, signal);
+                    system_pipeline.in_signal(items, signal);
                 }
 
-                // Handle external events
-                if let Some(rx) = &self.external_rx {
+                // Handle incoming events
+                if let Some(rx) = &self.rx {
                     for signal in rx.try_iter() {
                         match signal {
-                            ExternalSignal::Stop => {
+                            InSignal::Stop => {
                                 log::info!("Engine stopping");
                                 self.state = EngineState::Stopped {
                                     window: items.window.clone(),
                                 };
                                 return;
                             }
-                            ExternalSignal::Start { .. } => log::warn!("Engine already started"),
-                            ExternalSignal::Custom { signal, .. } => {
-                                system_pipeline.external_signal(items, signal)
+                            InSignal::Start { .. } => log::warn!("Engine already started"),
+                            InSignal::Custom { signal, .. } => {
+                                system_pipeline.in_signal(items, signal)
                             }
                         }
                     }
                 }
             }
             EngineState::Stopped { window } => {
-                // Handle external events
-                if let Some(rx) = &self.external_rx {
+                // Handle incoming events
+                if let Some(rx) = &self.rx {
                     for signal in rx.try_iter() {
                         match signal {
-                            ExternalSignal::Start {
+                            InSignal::Start {
                                 window_attributes,
                                 system_pipeline_args,
                             } => {
@@ -183,23 +183,23 @@ impl<T: SystemPipeline<Args = U, ExternalSignal = V>, U, V> ApplicationHandler f
                                 self.resumed(event_loop);
                                 return;
                             }
-                            ExternalSignal::Stop => log::warn!("Engine already stopped"),
-                            ExternalSignal::Custom { signal, queue } => match queue {
-                                external_signal::QueueBehavior::Replace(pred) => {
+                            InSignal::Stop => log::warn!("Engine already stopped"),
+                            InSignal::Custom { signal, queue } => match queue {
+                                signal::QueueBehavior::Replace(pred) => {
                                     self.queued_signals.retain(|x| !pred(x, &signal));
                                     self.queued_signals.push_back(signal)
                                 }
-                                external_signal::QueueBehavior::Queued => {
+                                signal::QueueBehavior::Queued => {
                                     self.queued_signals.push_back(signal)
                                 }
-                                external_signal::QueueBehavior::Ignored => {}
+                                signal::QueueBehavior::Ignored => {}
                             },
                         }
                     }
 
                     window.request_redraw();
                 } else {
-                    panic!("Engine stopped without external receiver");
+                    panic!("Engine stopped without incoming signal receiver");
                 }
             }
             state => log::error!("Engine in unexpected state: {state:?}"),
