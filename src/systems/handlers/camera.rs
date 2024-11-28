@@ -11,6 +11,8 @@ pub struct Camera {
 
     bind_group_layout: wgpu::BindGroupLayout,
     bind_group: wgpu::BindGroup,
+
+    is_model_dirty: bool,
 }
 
 impl Camera {
@@ -56,6 +58,8 @@ impl Camera {
 
             bind_group_layout,
             bind_group,
+
+            is_model_dirty: false,
         }
     }
 
@@ -75,41 +79,33 @@ impl Camera {
         &self.model
     }
 
-    pub fn update(
-        &mut self,
-        dt: f32,
-        queue: &wgpu::Queue,
-        aspect_ratio: f32,
-        input: &WinitInputHelper,
-    ) {
-        let mut updated = false;
-
+    pub fn update(&mut self, dt: f32, input: &WinitInputHelper) {
         let right = self.model.right();
         let forward = (self.model.forward() * (Vec3::ONE - CameraModel::UP)).normalize();
 
         // Movement
         if input.key_held(KeyCode::KeyW) {
             self.model.position += forward * self.model.speed * dt;
-            updated = true;
+            self.is_model_dirty = true;
         } else if input.key_held(KeyCode::KeyS) {
             self.model.position -= forward * self.model.speed * dt;
-            updated = true;
+            self.is_model_dirty = true;
         }
 
         if input.key_held(KeyCode::KeyA) {
             self.model.position -= right * self.model.speed * dt;
-            updated = true;
+            self.is_model_dirty = true;
         } else if input.key_held(KeyCode::KeyD) {
             self.model.position += right * self.model.speed * dt;
-            updated = true;
+            self.is_model_dirty = true;
         }
 
         if input.key_held(KeyCode::Space) {
             self.model.position += CameraModel::UP * self.model.speed * dt;
-            updated = true;
+            self.is_model_dirty = true;
         } else if input.key_held(KeyCode::ShiftLeft) {
             self.model.position -= CameraModel::UP * self.model.speed * dt;
-            updated = true;
+            self.is_model_dirty = true;
         }
 
         // Rotation
@@ -121,16 +117,18 @@ impl Camera {
                 (self.model.pitch - pitch_delta).clamp(-Self::PITCH_LIMIT, Self::PITCH_LIMIT);
             self.model.yaw = (self.model.yaw - yaw_delta).rem_euclid(2.0 * std::f32::consts::PI);
 
-            updated = true;
+            self.is_model_dirty = true;
         }
+    }
 
-        // Update buffer
-        if updated || input.window_resized().is_some() {
+    pub fn render(&mut self, queue: &wgpu::Queue, aspect_ratio: f32, input: &WinitInputHelper) {
+        if self.is_model_dirty || input.window_resized().is_some() {
             queue.write_buffer(
                 &self.model_buffer,
                 0,
                 self.model.buffer(aspect_ratio).as_bytes(),
             );
+            self.is_model_dirty = false;
         }
     }
 }

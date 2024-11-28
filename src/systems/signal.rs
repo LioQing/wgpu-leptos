@@ -1,14 +1,15 @@
-#![allow(clippy::new_ret_no_self)]
-
 use crate::{
     engine::{self, signal::QueueBehavior},
-    systems::{handlers::PyramidModel, Args},
+    systems::{handlers::PyramidModel, Pipeline},
 };
 
 use super::handlers::PyramidTransform;
 
 /// Type alias for the [`engine::InSignal`] of [`crate::systems::Pipeline`].
-pub type EngineInSignal = engine::InSignal<Args, InSignal>;
+pub type EngineInSignal = engine::InSignal<Pipeline>;
+
+/// Type alias for the [`engine::SystemPipeline::OutSignal`] of [`crate::systems::Pipeline`].
+pub type EngineOutSignal = <Pipeline as engine::SystemPipeline>::OutSignal;
 
 macro_rules! signals {
     (
@@ -20,24 +21,38 @@ macro_rules! signals {
         )*
     ) => {
         paste::paste! {
-            /// Incoming signal of [`Pipeline`].
+            /// Incoming and outgoing signal of [`Pipeline`].
+            ///
+            /// The same type is used for both incoming and outgoing just for simplicity.
             #[derive(strum::EnumIs)]
-            pub enum InSignal {
+            pub enum Signal {
                 $($name([< $name Signal >]),)*
             }
 
+            impl std::fmt::Debug for Signal {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    match self {
+                        $(Signal::$name(..) => write!(f, concat!("Signal::", stringify!($name))),)*
+                    }
+                }
+            }
+
             $(
-                /// Signal for [`InSignal`].
+                /// Signal for [`Signal`].
                 pub struct [< $name Signal >] {
                     $(pub $field: $type,)*
                 }
 
                 impl [< $name Signal >] {
-                    pub fn new($($field: $type),*) -> EngineInSignal {
+                    pub fn in_signal($($field: $type),*) -> EngineInSignal {
                         EngineInSignal::Custom {
-                            signal: InSignal::$name(Self { $($field),* }),
+                            signal: Signal::$name(Self { $($field),* }),
                             $($($behavior_ident: $behavior_expr,)+)?
                         }
+                    }
+
+                    pub fn out_signal($($field: $type),*) -> EngineOutSignal {
+                        Signal::$name(Self { $($field),* })
                     }
                 }
             )*

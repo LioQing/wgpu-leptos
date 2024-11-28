@@ -1,9 +1,12 @@
 use leptos::*;
-use leptos_use::use_element_bounding;
+use leptos_use::{use_element_bounding, use_interval_fn};
 
 use crate::{
     systems,
-    ui::components::{engine_canvas::EngineTx, EngineCanvas},
+    ui::components::{
+        engine_canvas::{EngineRx, EngineTx},
+        EngineCanvas,
+    },
 };
 
 /// Engine component.
@@ -16,6 +19,17 @@ pub fn Engine(
     let container_size = use_element_bounding(container_node);
 
     let controller = controller.unwrap_or_default();
+
+    // Add handler for engine's signal.
+    controller.add_rx_handler(move |signal| match signal {
+        systems::Signal::PyramidTransformUpdate(signal) => {
+            controller.pyramid_transform.set(signal.transform);
+        }
+        systems::Signal::PyramidModelUpdate(signal) => {
+            controller.pyramid_model.set(signal.model);
+        }
+        _ => log::warn!("Unhandled signal: {signal:?}"),
+    });
 
     // Keep the engine same size as the container.
     create_effect(move |_| {
@@ -33,7 +47,8 @@ pub fn Engine(
         let width = container.width();
         let height = container.height();
 
-        tx.send(systems::ResizeSignal::new(width, height)).unwrap();
+        tx.send(systems::ResizeSignal::in_signal(width, height))
+            .unwrap();
     });
 
     view! {
@@ -65,6 +80,7 @@ pub fn Engine(
                         ..Default::default()
                     }
                     tx=controller.tx().split()
+                    rx=controller.rx().split()
                 />
             </Show>
         </div>
@@ -76,6 +92,7 @@ pub fn Engine(
 pub struct EngineController {
     running: RwSignal<bool>,
     tx: RwSignal<EngineTx>,
+    rx: RwSignal<EngineRx>,
     pyramid_transform: RwSignal<systems::handlers::PyramidTransform>,
     pyramid_model: RwSignal<systems::handlers::PyramidModel>,
 }
@@ -89,6 +106,10 @@ impl EngineController {
         self.tx
     }
 
+    pub fn rx(&self) -> RwSignal<EngineRx> {
+        self.rx
+    }
+
     pub fn pyramid_transform(&self) -> RwSignal<systems::handlers::PyramidTransform> {
         self.pyramid_transform
     }
@@ -96,7 +117,7 @@ impl EngineController {
     pub fn signal_pyramid_transform_update(&self) {
         self.tx().with(|tx| match tx {
             Some(tx) => {
-                tx.send(systems::PyramidTransformUpdateSignal::new(
+                tx.send(systems::PyramidTransformUpdateSignal::in_signal(
                     self.pyramid_transform().get(),
                 ))
                 .unwrap();
@@ -110,16 +131,41 @@ impl EngineController {
     }
 }
 
+impl EngineController {
+    pub fn add_rx_handler(&self, handler: impl Fn(systems::Signal) + Clone + 'static) {
+        let rx = self.rx;
+        use_interval_fn(
+            move || {
+                rx.with(|rx: &EngineRx| {
+                    if let Some(rx) = rx {
+                        for signal in rx.try_iter() {
+                            handler(signal);
+                        }
+                    }
+                })
+            },
+            (systems::Args::default()
+                .fps_limit
+                .as_secs_f32()
+                .map(|v| v.sqrt()) // Make it more responsive
+                .unwrap_or(1e-3)
+                * 1e3) as u64,
+        );
+    }
+}
+
 impl Default for EngineController {
     fn default() -> Self {
         let running = create_rw_signal(false);
         let tx = create_rw_signal(None);
+        let rx = create_rw_signal(None);
         let pyramid_transform = create_rw_signal(systems::handlers::PyramidTransform::default());
         let pyramid_model = create_rw_signal(systems::handlers::PyramidModel::default());
 
         Self {
             running,
             tx,
+            rx,
             pyramid_transform,
             pyramid_model,
         }

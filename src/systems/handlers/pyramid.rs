@@ -1,7 +1,9 @@
+use std::sync::mpsc;
+
 use glam::*;
 use wgpu::util::DeviceExt;
 
-use crate::systems::{RgbColor, Transform};
+use crate::systems::{EngineOutSignal, PyramidTransformUpdateSignal, RgbColor, Transform};
 
 /// Handler for the spinning pyramid.
 pub struct Pyramid {
@@ -203,6 +205,15 @@ impl Pyramid {
         self.transform_mut()
             .transform
             .rotate(Quat::from_axis_angle(Vec3::Y, rotation));
+    }
+
+    pub fn signal(&self, tx: &mpsc::Sender<EngineOutSignal>) {
+        if self.is_transform_dirty {
+            tx.send(PyramidTransformUpdateSignal::out_signal(
+                self.transform.clone(),
+            ))
+            .unwrap();
+        }
     }
 
     pub fn render(

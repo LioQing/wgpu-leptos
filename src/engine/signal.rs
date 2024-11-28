@@ -1,20 +1,25 @@
 use winit::window::WindowAttributes;
 
+use crate::engine::SystemPipeline;
+
 /// Ingcoming signal passed to the engine.
 ///
 /// This is mostly only used in WASM builds,
 /// so that the engine can interoperate with the UI.
 #[derive(Debug, Clone)]
-pub enum InSignal<T, U> {
+pub enum InSignal<T: SystemPipeline> {
     /// Start or restart the engine.
     Start {
         window_attributes: WindowAttributes,
-        system_pipeline_args: T,
+        system_pipeline_args: T::Args,
     },
     /// Stop the engine.
     Stop,
     /// Custom signal.
-    Custom { signal: U, queue: QueueBehavior<U> },
+    Custom {
+        signal: T::InSignal,
+        queue: QueueBehavior<T::InSignal>,
+    },
 }
 
 /// Queue behavior of the [`InSignal`].

@@ -4,7 +4,7 @@ use winit::{dpi::LogicalSize, window::Window};
 
 use crate::{
     engine,
-    systems::{handlers, Args, InSignal},
+    systems::{handlers, Args, Signal},
 };
 
 /// Pipeline.
@@ -18,7 +18,8 @@ pub struct Pipeline {
 
 impl engine::SystemPipeline for Pipeline {
     type Args = Args;
-    type InSignal = InSignal;
+    type InSignal = Signal;
+    type OutSignal = Signal;
 
     async fn init(window: Arc<Window>, configs: Self::Args) -> Self {
         log::debug!("Initializing system pipeline");
@@ -58,26 +59,34 @@ impl engine::SystemPipeline for Pipeline {
         }
     }
 
-    fn window_event(&mut self, _: &mut engine::Items, event: &winit::event::WindowEvent) {
+    fn window_event(
+        &mut self,
+        _: &mut engine::Items<Self::OutSignal>,
+        event: &winit::event::WindowEvent,
+    ) {
         self.cursor_lock.window_event(event);
     }
 
-    fn update(&mut self, items: &mut engine::Items) {
+    fn update(&mut self, items: &mut engine::Items<Self::OutSignal>) {
+        // Updates
         self.time.update();
         self.display.update(&items.input);
         self.cursor_lock.update(&mut items.input);
         self.pyramid.update(self.time.delta());
 
-        if self.cursor_lock.is_cursor_locked() || items.input.window_resized().is_some() {
-            self.camera.update(
-                self.time.delta(),
-                self.display.queue(),
-                self.display.aspect_ratio(),
-                &items.input,
-            );
+        if self.cursor_lock.is_cursor_locked() {
+            self.camera.update(self.time.delta(), &items.input);
         }
 
+        // Signal
+        if let Some(tx) = items.tx.as_ref() {
+            self.pyramid.signal(tx);
+        }
+
+        // Render
         self.display.render(|display, pass| {
+            self.camera
+                .render(display.queue(), display.aspect_ratio(), &items.input);
             self.pyramid
                 .render(display.queue(), pass, self.camera.bind_group())
         });
@@ -85,9 +94,9 @@ impl engine::SystemPipeline for Pipeline {
         self.time.end_frame(items.window.clone());
     }
 
-    fn in_signal(&mut self, items: &mut engine::Items, signal: Self::InSignal) {
+    fn in_signal(&mut self, items: &mut engine::Items<Self::OutSignal>, signal: Self::InSignal) {
         match signal {
-            InSignal::Resize(resize) => {
+            Signal::Resize(resize) => {
                 log::debug!(
                     "Resize incoming signal: {} x {}",
                     resize.width,
@@ -97,11 +106,11 @@ impl engine::SystemPipeline for Pipeline {
                     .window
                     .request_inner_size(LogicalSize::new(resize.width, resize.height));
             }
-            InSignal::PyramidTransformUpdate(update) => {
+            Signal::PyramidTransformUpdate(update) => {
                 log::debug!("Pyramid transform incoming signal");
                 self.pyramid.set_transform(update.transform);
             }
-            InSignal::PyramidModelUpdate(update) => {
+            Signal::PyramidModelUpdate(update) => {
                 log::debug!("Pyramid model incoming signal");
                 self.pyramid.set_model(update.model);
             }

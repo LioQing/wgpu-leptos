@@ -11,13 +11,13 @@ This project is made possible by [WASM](https://webassembly.org/) and [WebGPU](h
 Features:
 
 - 🖼️ Provides a template for letting wgpu control a canvas in a Leptos application.
-- 🤝 Enables interoperability between wgpu and Leptos through a [`std::sync::mpsc::channel`](https://doc.rust-lang.org/std/sync/mpsc/fn.channel.html).
+- 🤝 Enables interoperability between wgpu and Leptos through a pair of[`std::sync::mpsc::channel`](https://doc.rust-lang.org/std/sync/mpsc/fn.channel.html).
 - 🕹️ Demonstrates a real-time interactive example of a pyramid rendering.
 - 🌐 Cross-platform compatibility enabled by wgpu to run both natively (only the canvas) and on the web.
 
 Improvements:
 
 - 📦 Be more modular and less ambiguous in the functionality and responsibility of each module.
-- 🤝 Allow bidirectional communication, instead of only letting Leptos send message to the engine.
+- 💫 Fix the rubber banding when configurations are set by only sending signal with the changed field.
 - 👾 Fix minor bugs related to controls, e.g. when window resizes.
 - ⚙️ Add more configuration options.

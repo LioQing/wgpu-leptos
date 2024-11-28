@@ -14,14 +14,15 @@ use winit_input_helper::WinitInputHelper;
 use crate::engine::{signal, InSignal, Items, SystemPipeline};
 
 /// The main engine struct that create the window and runs the system pipeline.
-pub struct Engine<T: SystemPipeline<Args = U, InSignal = V>, U: 'static, V> {
-    rx: Option<mpsc::Receiver<InSignal<U, V>>>,
-    queued_signals: VecDeque<V>,
-    state: EngineState<T, U>,
+pub struct Engine<T: SystemPipeline> {
+    rx: Option<mpsc::Receiver<InSignal<T>>>,
+    tx: Option<mpsc::Sender<T::OutSignal>>,
+    queued_signals: VecDeque<T::InSignal>,
+    state: EngineState<T>,
 }
 
-impl<T: SystemPipeline<Args = U, InSignal = V>, U, V> Engine<T, U, V> {
-    pub fn new(window_attributes: WindowAttributes, system_pipeline_args: U) -> Self {
+impl<T: SystemPipeline> Engine<T> {
+    pub fn new(window_attributes: WindowAttributes, system_pipeline_args: T::Args) -> Self {
         let state = EngineState::PreInit {
             items: PreInitItems {
                 window_attributes,
@@ -31,19 +32,26 @@ impl<T: SystemPipeline<Args = U, InSignal = V>, U, V> Engine<T, U, V> {
 
         Self {
             rx: None,
+            tx: None,
             queued_signals: VecDeque::new(),
             state,
         }
     }
 
     /// Set the incoming signal receiver.
-    pub fn with_rx(mut self, rx: mpsc::Receiver<InSignal<U, V>>) -> Self {
+    pub fn with_rx(mut self, rx: mpsc::Receiver<InSignal<T>>) -> Self {
         self.rx = Some(rx);
+        self
+    }
+
+    /// Set the outgoing signal sender.
+    pub fn with_tx(mut self, tx: mpsc::Sender<T::OutSignal>) -> Self {
+        self.tx = Some(tx);
         self
     }
 }
 
-impl<T: SystemPipeline<Args = U, InSignal = V>, U, V> ApplicationHandler for Engine<T, U, V> {
+impl<T: SystemPipeline> ApplicationHandler for Engine<T> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Already initialized
         if !matches!(&self.state, EngineState::PreInit { .. }) {
@@ -113,9 +121,10 @@ impl<T: SystemPipeline<Args = U, InSignal = V>, U, V> ApplicationHandler for Eng
                         window.request_redraw();
 
                         self.state = EngineState::PostInit {
-                            items: Items {
+                            items: Items::<T::OutSignal> {
                                 window,
                                 input: std::mem::take(input),
+                                tx: self.tx.clone(),
                             },
                             system_pipeline,
                         };
@@ -237,9 +246,9 @@ struct PreInitItems<T> {
 }
 
 /// Items representing the engine's initialization state.
-enum EngineState<T, U> {
+enum EngineState<T: SystemPipeline> {
     PreInit {
-        items: PreInitItems<U>,
+        items: PreInitItems<T::Args>,
     },
     InitializingEngine,
     InitializingSystemPipeline {
@@ -247,7 +256,7 @@ enum EngineState<T, U> {
         input: Box<WinitInputHelper>,
     },
     PostInit {
-        items: Items,
+        items: Items<T::OutSignal>,
         system_pipeline: T,
     },
     Stopped {
@@ -255,10 +264,10 @@ enum EngineState<T, U> {
     },
 }
 
-impl<T, U> EngineState<T, U> {
-    /// Take the [`PreInitItems<U>`] and go into
+impl<T: SystemPipeline> EngineState<T> {
+    /// Take the [`PreInitItems<T::Args>`] and go into
     /// [`EngineState::InitializingEngine`].
-    fn initialize_engine(&mut self) -> PreInitItems<U> {
+    fn initialize_engine(&mut self) -> PreInitItems<T::Args> {
         match std::mem::replace(self, Self::InitializingEngine) {
             Self::PreInit { items } => items,
             state => panic!("Expected `PreInit`, found {state:?}"),
@@ -266,7 +275,7 @@ impl<T, U> EngineState<T, U> {
     }
 }
 
-impl<T, U> std::fmt::Debug for EngineState<T, U> {
+impl<T: SystemPipeline> std::fmt::Debug for EngineState<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::PreInit { .. } => write!(f, "EngineState::PreInit"),

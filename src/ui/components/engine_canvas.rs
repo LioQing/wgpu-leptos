@@ -22,10 +22,12 @@ pub fn EngineCanvas(
         systems::Args,
     >,
     #[prop(optional, into)] tx: Option<(ReadSignal<EngineTx>, WriteSignal<EngineTx>)>,
+    #[prop(optional, into)] rx: Option<(ReadSignal<EngineRx>, WriteSignal<EngineRx>)>,
 ) -> impl IntoView {
     let node = create_node_ref::<html::Canvas>();
 
     let (tx, set_tx) = tx.unwrap_or(create_signal(None));
+    let (_, set_rx) = rx.unwrap_or(create_signal(None));
 
     // Cleanup the engine when the component is destroyed.
     on_cleanup(move || {
@@ -66,9 +68,13 @@ pub fn EngineCanvas(
                 let (new_tx, rx) = mpsc::channel();
                 set_tx.set(Some(new_tx));
 
+                let (tx, new_rx) = mpsc::channel();
+                set_rx.set(Some(new_rx));
+
                 engine::Runner::new()
                     .with_window_attributes(window_attributes)
                     .with_rx(rx)
+                    .with_tx(tx)
                     .with_system_pipeline::<systems::Pipeline>(system_pipeline_args)
                     .run()
                     .unwrap();
@@ -83,3 +89,6 @@ pub fn EngineCanvas(
 
 /// Engine incoming signal sender.
 pub type EngineTx = Option<mpsc::Sender<systems::EngineInSignal>>;
+
+/// Engine outgoing signal receiver.
+pub type EngineRx = Option<mpsc::Receiver<systems::EngineOutSignal>>;
